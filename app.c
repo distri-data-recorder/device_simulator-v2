@@ -80,6 +80,8 @@ typedef struct {
 // 全局应用上下文
 static app_context_t g_app;
 
+static uint8_t g_recv_raw_buf[4096];
+
 // 前向声明
 static void app_send_frame_with_seq(uint8_t cmd, uint8_t seq, const uint8_t* payload, uint16_t len);
 static void app_send_frame(uint8_t cmd, const uint8_t* payload, uint16_t len);
@@ -94,7 +96,7 @@ void app_init(void) {
     
     g_app.mode = MODE_CONTINUOUS;
     g_app.status = STATUS_STOPPED;
-    g_app.num_channels = 2;
+    g_app.num_channels = 3;
     
     // 默认通道配置
     g_app.channels[0].enabled = 1;
@@ -105,6 +107,10 @@ void app_init(void) {
     g_app.channels[1].sample_rate = 10000;
     g_app.channels[1].format = 0x01;
     
+    // 默认通道配置
+    g_app.channels[2].enabled = 1;
+    g_app.channels[2].sample_rate = 10000;
+    g_app.channels[2].format = 0x01; // int16
     // 初始化接收和发送缓冲区
     initRxBuffer(&g_app.rx_buffer);
     initTxBuffer(&g_app.tx_buffer);
@@ -112,10 +118,6 @@ void app_init(void) {
     printf("[APP] Initialized (mode=CONTINUOUS, status=STOPPED)\n");
 }
 
-// 获取接收缓冲区
-RxBuffer_t* app_get_rx_buffer(void) {
-    return &g_app.rx_buffer;
-}
 
 // 清理
 void app_cleanup(void) {
@@ -365,6 +367,28 @@ static void app_send_frame_with_seq(uint8_t cmd, uint8_t seq, const uint8_t* pay
 // 发送帧（使用自增seq，用于主动发送）
 static void app_send_frame(uint8_t cmd, const uint8_t* payload, uint16_t len) {
     app_send_frame_with_seq(cmd, g_app.seq_counter++, payload, len);
+}
+
+// 处理接收缓冲区（由主循环调用）
+void app_process_rx_buffer(void) {
+    if (!g_app.transport) {
+        return;
+    }
+    // 1. 接收数据
+    int n = g_app.transport->recv(g_app.transport->impl_ctx, g_recv_raw_buf, sizeof(g_recv_raw_buf));
+    if (n > 0) {
+        // 喂给RxBuffer
+        uint16_t fed = feedRxBuffer(&g_app.rx_buffer, g_recv_raw_buf, n);
+        if (fed < n) {
+            printf("[MAIN] Warning: RxBuffer overflow, lost %d bytes\n", n - fed);
+        }
+        
+        // 尝试解析帧
+        tryParseFramesFromRx(&g_app.rx_buffer, app_on_frame);
+    } else if (n < 0) {
+        printf("[MAIN] Transport error, exiting\n");
+    }    
+
 }
 
 // 处理发送缓冲区（由主循环调用）

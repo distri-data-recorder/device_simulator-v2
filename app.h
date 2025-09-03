@@ -27,14 +27,14 @@ void app_cleanup(void);
 // 设置传输层（应用层需要用它发送数据）
 void app_set_transport(transport_t* transport);
 
-// 获取接收缓冲区（供主循环使用）
-RxBuffer_t* app_get_rx_buffer(void);
-
 // 帧回调（由tryParseFramesFromRx调用）
 void app_on_frame(const uint8_t* frame, uint16_t frameLen);
 
 // 周期性任务（主循环调用）
 void app_periodic_task(uint32_t current_time_ms);
+
+// 处理接收缓冲区（由主循环调用）
+void app_process_rx_buffer(void);
 
 // 处理发送缓冲区（主循环调用）
 void app_process_tx_buffer(void);

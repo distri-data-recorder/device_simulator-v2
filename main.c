@@ -29,7 +29,6 @@
 
 // 全局变量
 static volatile int g_running = 1;
-static uint8_t g_recv_raw_buf[4096];
 
 // 信号处理
 static void signal_handler(int sig) {
@@ -92,11 +91,8 @@ int main(int argc, char* argv[]) {
     app_init();
     printf("[MAIN] Application initialized\n");
     
-    // 获取应用层的RxBuffer
-    RxBuffer_t* rx_buffer = app_get_rx_buffer();
-    
     // 创建传输层（测试模式）
-    transport_t* transport = transport_test_create();
+    transport_t* transport = transport_tcp_create();
     if (!transport) {
         printf("[MAIN] Failed to create transport\n");
         return 1;
@@ -130,23 +126,10 @@ int main(int argc, char* argv[]) {
     // 主循环
     while (g_running) {
         uint32_t now = get_time_ms();
-        
-        // 1. 接收数据
-        int n = transport->recv(transport->impl_ctx, g_recv_raw_buf, sizeof(g_recv_raw_buf));
-        if (n > 0) {
-            // 喂给RxBuffer
-            uint16_t fed = feedRxBuffer(rx_buffer, g_recv_raw_buf, n);
-            if (fed < n) {
-                printf("[MAIN] Warning: RxBuffer overflow, lost %d bytes\n", n - fed);
-            }
-            
-            // 尝试解析帧
-            tryParseFramesFromRx(rx_buffer, app_on_frame);
-        } else if (n < 0) {
-            printf("[MAIN] Transport error, exiting\n");
-            break;
-        }
-        
+
+        // 1. 处理接收缓冲区
+        app_process_rx_buffer();
+
         // 2. 应用层周期任务
         app_periodic_task(now);
         

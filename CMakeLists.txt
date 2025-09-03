@@ -21,6 +21,7 @@ set(SOURCES
     main.c
     app.c
     transport_test.c
+    transport_tcp_client.c
     protocol/protocol.c
     protocol/io_buffer.c
 )

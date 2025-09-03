@@ -29,7 +29,7 @@ typedef struct transport_s {
 transport_t* transport_test_create(void);
 
 // 未来可以添加
-// transport_t* transport_tcp_create(void);
+transport_t* transport_tcp_create(void);
 // transport_t* transport_usb_create(void);
 
 #endif
