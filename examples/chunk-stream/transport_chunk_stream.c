@@ -208,7 +208,6 @@ static void ChunkStreamTxThread(void* arg){
 static int cs_init(void* ctx, const char* config){
     (void)config;
     cs_ctx_t* t = (cs_ctx_t*)ctx;
-    memset(t, 0, sizeof(*t));
 
     // 初始化空闲栈
     for (uint16_t i = 0; i < CS_RX_POOL_COUNT; ++i) {
